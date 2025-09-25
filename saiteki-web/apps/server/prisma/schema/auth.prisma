@@ -1,13 +1,14 @@
 model User {
-  id            String    @id @map("_id")
-  name          String
-  email         String
-  emailVerified Boolean
-  image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
-  sessions      Session[]
-  accounts      Account[]
+  id                  String               @id @map("_id")
+  name                String
+  email               String
+  emailVerified       Boolean
+  image               String?
+  createdAt           DateTime
+  updatedAt           DateTime
+  sessions            Session[]
+  accounts            Account[]
+  optimizationTasks   OptimizationTask[]
 
   @@unique([email])
   @@map("user")

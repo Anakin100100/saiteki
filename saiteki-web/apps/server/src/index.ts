@@ -5,7 +5,7 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { RPCHandler } from "@orpc/server/fetch";
 import { onError } from "@orpc/server";
 import { createContext } from "./lib/context";
-import { appRouter } from "./routers/index";
+import { appRouter, internalRouter } from "./routers";
 import { auth } from "./lib/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -45,6 +45,51 @@ export const rpcHandler = new RPCHandler(appRouter, {
 			console.error(error);
 		}),
 	],
+});
+
+export const internalApiHandler = new OpenAPIHandler(internalRouter, {
+	plugins: [
+		new OpenAPIReferencePlugin({
+			schemaConverters: [new ZodToJsonSchemaConverter()],
+		}),
+	],
+	interceptors: [
+		onError((error) => {
+			console.error(error);
+		}),
+	],
+});
+
+export const internalRpcHandler = new RPCHandler(internalRouter, {
+	interceptors: [
+		onError((error) => {
+			console.error(error);
+		}),
+	],
+});
+
+app.use("/internal/*", async (c, next) => {
+	const context = await createContext({ context: c });
+
+	const rpcResult = await internalRpcHandler.handle(c.req.raw, {
+		prefix: "/internal/rpc",
+		context,
+	});
+
+	if (rpcResult.matched) {
+		return c.newResponse(rpcResult.response.body, rpcResult.response);
+	}
+
+	const apiResult = await internalApiHandler.handle(c.req.raw, {
+		prefix: "/internal/api",
+		context,
+	});
+
+	if (apiResult.matched) {
+		return c.newResponse(apiResult.response.body, apiResult.response);
+	}
+
+	await next();
 });
 
 app.use("/*", async (c, next) => {

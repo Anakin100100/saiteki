@@ -1,0 +1,27 @@
+model OptimizationTask {
+  id                     String   @id @default(cuid()) @map("_id")
+  running                Boolean  @default(false)
+  userId                 String   @map("user_id")
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  optimizedFunc          String   @map("optimized_func") @db.Text
+  validateResultFunc     String   @map("validate_result_func") @db.Text
+  generateMetricsFunc    String   @map("generate_metrics_func") @db.Text
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  logs                   String?  @db.Text
+  optimizationResults    OptimizationResult[]
+
+  @@map("optimization_task")
+}
+
+model OptimizationResult {
+  id                     String            @id @default(cuid()) @map("_id")
+  optimizationTaskId     String            @map("optimization_task_id")
+  optimizationTask       OptimizationTask  @relation(fields: [optimizationTaskId], references: [id], onDelete: Cascade)
+  generationNum          Int               @map("generation_num")
+  solutionCode           String            @map("solution_code") @db.Text
+  createdAt              DateTime          @default(now()) @map("created_at")
+  updatedAt              DateTime          @updatedAt @map("updated_at")
+
+  @@map("optimization_result")
+}

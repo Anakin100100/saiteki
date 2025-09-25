@@ -2,6 +2,9 @@ import time
 from shinka.core import EvolutionRunner
 from loguru import logger
 from worker.shutdown_service import ShutdownService
+from shinka.core import EvolutionRunner, EvolutionConfig
+from shinka.database import DatabaseConfig
+from shinka.launch import LocalJobConfig
 
 def main():
     logger.info("Starting saiteki worker")
@@ -12,9 +15,17 @@ def main():
     
     try:
         while not shutdown_service.should_shutdown():
-            # Main worker logic here
-            # For now, just sleep to simulate work
-            time.sleep(1)
+            job_config = LocalJobConfig(eval_program_path="evaluate.py")
+            db_config = DatabaseConfig()
+            evo_config = EvolutionConfig(init_program_path="initial.py",)
+
+            # Run evolution with defaults
+            runner = EvolutionRunner(
+                evo_config=evo_config,
+                job_config=job_config,
+                db_config=db_config,
+            )
+            runner.run()
             
         logger.info("Shutdown signal received, stopping worker...")
         
