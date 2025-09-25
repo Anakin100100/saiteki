@@ -91,12 +91,11 @@ import numpy as np
 
 
 # EVOLVE-BLOCK-END
-
-
 def run_optimization():
-    """Run the optimization function."""
-    result = optimize()
-    return result
+    centers, radii = optimize()
+    # Calculate the sum of radii
+    sum_radii = np.sum(radii)
+    return centers, radii, sum_radii
 '''
         return content
     
@@ -214,7 +213,7 @@ def run_optimization():
             os.chdir(task_dir)
             
             # Create evolution configs (copied from run_evo.py)
-            job_config = LocalJobConfig(eval_program_path="evaluate.py")
+            job_config = LocalJobConfig(eval_program_path=os.path.join(task_dir, "evaluate.py"))
             
             db_config = DatabaseConfig(
                 db_path="evolution_db.sqlite",
@@ -229,9 +228,25 @@ def run_optimization():
                 parent_selection_strategy="weighted",
                 parent_selection_lambda=10.0,
             )
+
+            search_task_sys_msg = """You are an expert mathematician specializing in circle packing problems and computational geometry. The best known result for the sum of radii when packing 26 circles in a unit square is 2.635.
+
+Key directions to explore:
+1. The optimal arrangement likely involves variable-sized circles
+2. A pure hexagonal arrangement may not be optimal due to edge effects
+3. The densest known circle packings often use a hybrid approach
+4. The optimization routine is critically important - simple physics-based models with carefully tuned parameters
+5. Consider strategic placement of circles at square corners and edges
+6. Adjusting the pattern to place larger circles at the center and smaller at the edges
+7. The math literature suggests special arrangements for specific values of n
+8. You can use the scipy optimize package (e.g. LP or SLSQP) to optimize the radii given center locations and constraints
+
+Make sure that all circles are disjoint and lie inside the unit square.
+
+Be creative and try to find a new solution better than the best known result."""
             
             evo_config = EvolutionConfig(
-                task_sys_msg="You are an expert optimizer. Improve the optimization function to maximize the result.",
+                task_sys_msg=search_task_sys_msg,
                 patch_types=["diff", "full", "cross"],
                 patch_type_probs=[0.6, 0.3, 0.1],
                 num_generations=10,  # Reduced for faster iteration
@@ -255,8 +270,8 @@ def run_optimization():
                 novelty_llm_kwargs=dict(temperatures=[0.0], max_tokens=16384),
                 llm_dynamic_selection=None,  # Disable dynamic selection to avoid numerical issues
                 llm_dynamic_selection_kwargs=dict(exploration_coef=1.0),
-                init_program_path="initial.py",
-                results_dir="/home/pawel/saiteki/saiteki-worker/results",
+                init_program_path=os.path.join(task_dir, "initial.py"),
+                results_dir=os.path.join(task_dir, "results"),
             )
             
             # Create custom EvolutionRunner with task integration
