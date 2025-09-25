@@ -10,13 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodosRouteImport } from './routes/todos'
+import { Route as OptimizationRouteImport } from './routes/optimization'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OptimizationTaskIdRouteImport } from './routes/optimization/$taskId'
 
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
   path: '/todos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OptimizationRoute = OptimizationRouteImport.update({
+  id: '/optimization',
+  path: '/optimization',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -34,38 +41,69 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OptimizationTaskIdRoute = OptimizationTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => OptimizationRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/optimization': typeof OptimizationRouteWithChildren
   '/todos': typeof TodosRoute
+  '/optimization/$taskId': typeof OptimizationTaskIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/optimization': typeof OptimizationRouteWithChildren
   '/todos': typeof TodosRoute
+  '/optimization/$taskId': typeof OptimizationTaskIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/optimization': typeof OptimizationRouteWithChildren
   '/todos': typeof TodosRoute
+  '/optimization/$taskId': typeof OptimizationTaskIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/todos'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/optimization'
+    | '/todos'
+    | '/optimization/$taskId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/todos'
-  id: '__root__' | '/' | '/dashboard' | '/login' | '/todos'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/optimization'
+    | '/todos'
+    | '/optimization/$taskId'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/optimization'
+    | '/todos'
+    | '/optimization/$taskId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  OptimizationRoute: typeof OptimizationRouteWithChildren
   TodosRoute: typeof TodosRoute
 }
 
@@ -76,6 +114,13 @@ declare module '@tanstack/react-router' {
       path: '/todos'
       fullPath: '/todos'
       preLoaderRoute: typeof TodosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/optimization': {
+      id: '/optimization'
+      path: '/optimization'
+      fullPath: '/optimization'
+      preLoaderRoute: typeof OptimizationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -99,13 +144,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/optimization/$taskId': {
+      id: '/optimization/$taskId'
+      path: '/$taskId'
+      fullPath: '/optimization/$taskId'
+      preLoaderRoute: typeof OptimizationTaskIdRouteImport
+      parentRoute: typeof OptimizationRoute
+    }
   }
 }
+
+interface OptimizationRouteChildren {
+  OptimizationTaskIdRoute: typeof OptimizationTaskIdRoute
+}
+
+const OptimizationRouteChildren: OptimizationRouteChildren = {
+  OptimizationTaskIdRoute: OptimizationTaskIdRoute,
+}
+
+const OptimizationRouteWithChildren = OptimizationRoute._addFileChildren(
+  OptimizationRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  OptimizationRoute: OptimizationRouteWithChildren,
   TodosRoute: TodosRoute,
 }
 export const routeTree = rootRouteImport

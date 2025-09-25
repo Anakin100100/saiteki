@@ -12,6 +12,8 @@ const createOptimizationResultInput = z.object({
 	optimization_task_id: z.string().min(1),
 	generation_num: z.number().int().min(0),
 	solution_code: z.string().min(1),
+	combined_score: z.number(),
+	public_metrics: z.record(z.string(), z.number()),
 });
 
 const completeOptimizationTaskInput = z.object({
@@ -45,6 +47,8 @@ export const internalOptimizationRouter = {
 					optimizationTaskId: input.optimization_task_id,
 					generationNum: input.generation_num,
 					solutionCode: input.solution_code,
+					combinedScore: input.combined_score,
+					publicMetrics: input.public_metrics,
 				},
 			});
 		}),
