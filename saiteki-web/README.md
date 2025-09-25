@@ -45,11 +45,12 @@ bun dev
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 The API is running at [http://localhost:3000](http://localhost:3000).
 
+## NATS Setup
 
+The server publishes newly created optimization tasks to a NATS subject called `created_optimization_tasks`.
 
-
-
-
+1. Ensure a NATS server is running. By default the app connects to `nats://127.0.0.1:4222`.
+2. Optionally set the `NATS_URL` environment variable in `apps/server/.env` if your NATS instance runs elsewhere.
 
 ## Project Structure
 

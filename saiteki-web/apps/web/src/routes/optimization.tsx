@@ -132,7 +132,7 @@ function OptimizationListRoute() {
 				</CardHeader>
 				<CardContent>
 					{isFormOpen && (
-						<div className="mb-6 rounded-lg border border-emerald-700 bg-emerald-950/40 p-4">
+						<div className="mb-6 rounded-lg border border-emerald-700 p-4">
 							<Form {...form}>
 								<form onSubmit={handleSubmit} className="space-y-4">
 									<FormField

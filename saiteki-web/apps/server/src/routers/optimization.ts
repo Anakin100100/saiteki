@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import z from "zod";
 import prisma from "../db";
 import { protectedProcedure } from "../lib/orpc";
+import { publishJson } from "../lib/nats";
 
 const createOptimizationTaskInput = z.object({
 	optimized_func: z.string().min(1),
@@ -36,7 +37,7 @@ export const optimizationRouter = {
 				});
 			}
 
-			return prisma.optimizationTask.create({
+			const task = await prisma.optimizationTask.create({
 				data: {
 					running: true,
 					userId,
@@ -45,6 +46,24 @@ export const optimizationRouter = {
 					generateMetricsFunc: input.generate_metrics_func,
 				},
 			});
+
+			try {
+				await publishJson("created_optimization_tasks", {
+					id: task.id,
+					running: task.running,
+					userId: task.userId,
+					optimizedFunc: task.optimizedFunc,
+					validateResultFunc: task.validateResultFunc,
+					generateMetricsFunc: task.generateMetricsFunc,
+					createdAt: task.createdAt.toISOString(),
+					updatedAt: task.updatedAt.toISOString(),
+					logs: task.logs,
+				});
+			} catch (error) {
+				console.error("Failed to publish created optimization task", error);
+			}
+
+			return task;
 		}),
 
 	query_optimization_tasks: protectedProcedure.handler(async ({ context }) => {

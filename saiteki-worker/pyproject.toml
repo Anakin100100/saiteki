@@ -28,5 +28,6 @@ dependencies = [
     "adjustText",
     "markdown",
     "aiofiles",
-    "loguru"
+    "loguru",
+    "nats-py>=2.11.0",
 ]
