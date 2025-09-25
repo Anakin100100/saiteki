@@ -69,16 +69,18 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.85.5",
     "@tanstack/react-router-devtools": "^1.114.27",
     "@tanstack/router-plugin": "^1.114.27",
     "@types/node": "^22.13.13",
+    "@types/plotly.js": "^3.0.6",
     "@types/react": "~19.1.10",
     "@types/react-dom": "^19.0.4",
+    "@types/react-plotly.js": "^2.6.3",
     "@vitejs/plugin-react": "^4.3.4",
     "postcss": "^8.5.3",
-    "typescript": "^5.8.3",
     "tailwindcss": "^4.0.15",
-    "vite": "^6.2.2",
-    "@tanstack/react-query-devtools": "^5.85.5"
+    "typescript": "^5.8.3",
+    "vite": "^6.2.2"
   }
 }

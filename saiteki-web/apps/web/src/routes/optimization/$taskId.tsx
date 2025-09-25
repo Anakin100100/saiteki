@@ -52,7 +52,9 @@ function OptimizationTaskDetailRoute() {
 	const tasksQuery = useQuery(orpc.optimization.query_optimization_tasks.queryOptions());
 	const resultsQuery = useQuery(
 		orpc.optimization.query_optimization_results.queryOptions({
-			task_id: taskId,
+			input: {
+				task_id: taskId,
+			},
 		}),
 	);
 
@@ -132,14 +134,20 @@ function OptimizationTaskDetailRoute() {
 			paper_bgcolor: "transparent",
 			plot_bgcolor: "transparent",
 			font: { color: "currentColor" },
-			title: metricLabel,
+			title: {
+				text: metricLabel,
+			},
 			xaxis: {
-				title: "Generation",
+				title: {
+					text: "Generation",
+				},
 				tickmode: "linear" as const,
 				zeroline: false,
 			},
 			yaxis: {
-				title: metricLabel,
+				title: {
+					text: metricLabel,
+				},
 				zeroline: false,
 			},
 		};
