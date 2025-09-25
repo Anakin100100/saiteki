@@ -73,7 +73,7 @@ export const optimizationRouter = {
 			throw new ORPCError("UNAUTHORIZED");
 		}
 
-		return prisma.optimizationTask.findMany({
+		return await prisma.optimizationTask.findMany({
 			where: {
 				userId,
 			},
@@ -108,7 +108,7 @@ export const optimizationRouter = {
 				});
 			}
 
-			return prisma.optimizationResult.findMany({
+			return await prisma.optimizationResult.findMany({
 				where: {
 					optimizationTaskId: input.task_id,
 				},

@@ -24,7 +24,7 @@ export const internalOptimizationRouter = {
 	update_optimization_task_log: publicProcedure
 		.input(updateOptimizationTaskLogInput)
 		.handler(async ({ input }) => {
-			return prisma.optimizationTask.update({
+			return await prisma.optimizationTask.update({
 				where: {
 					id: input.task_id,
 				},
@@ -42,7 +42,7 @@ export const internalOptimizationRouter = {
 	create_optimization_result: publicProcedure
 		.input(createOptimizationResultInput)
 		.handler(async ({ input }) => {
-			return prisma.optimizationResult.create({
+			return await prisma.optimizationResult.create({
 				data: {
 					optimizationTaskId: input.optimization_task_id,
 					generationNum: input.generation_num,
@@ -56,7 +56,7 @@ export const internalOptimizationRouter = {
 	complete_optimization_task: publicProcedure
 		.input(completeOptimizationTaskInput)
 		.handler(async ({ input }) => {
-			return prisma.optimizationTask.update({
+			return await prisma.optimizationTask.update({
 				where: {
 					id: input.task_id,
 				},

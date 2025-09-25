@@ -104,7 +104,7 @@ def run_optimization():
         """Setup temporary directory with task files."""
         # Create temporary directory
         self.temp_dir = tempfile.mkdtemp(prefix=f"task_{task.id}_")
-        logger.info(f"Created temporary directory: {self.temp_dir}")
+        print(f"Created temporary directory: {self.temp_dir}")
         
         # Write evaluate.py
         evaluate_content = self.create_evaluate_py(task)
@@ -118,25 +118,25 @@ def run_optimization():
         with open(initial_path, 'w') as f:
             f.write(initial_content)
         
-        logger.info(f"Created task files in {self.temp_dir}")
+        print(f"Created task files in {self.temp_dir}")
         return self.temp_dir
     
     def cleanup_task_environment(self):
         """Clean up temporary directory and results."""
         if self.temp_dir and os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
-            logger.info(f"Cleaned up temporary directory: {self.temp_dir}")
+            print(f"Cleaned up temporary directory: {self.temp_dir}")
             self.temp_dir = None
         
         # Also clean up results directory if it exists
         if os.path.exists("results"):
             shutil.rmtree("results")
-            logger.info("Cleaned up results directory")
+            print("Cleaned up results directory")
     
-    async def update_task_logs(self, task_id: str, logs: str, running: bool = None):
+    def update_task_logs(self, task_id: str, logs: str, running: bool = None):
         """Update optimization task logs via API."""
         try:
-            async with httpx.AsyncClient() as client:
+            with httpx.Client() as client:
                 data = {
                     "task_id": task_id,
                     "logs": logs
@@ -144,21 +144,21 @@ def run_optimization():
                 if running is not None:
                     data["running"] = running
                     
-                response = await client.post(
-                    f"{self.api_base_url}/internal/rpc/optimization/update_optimization_task_log",
+                response = client.post(
+                    f"{self.api_base_url}/internal/api/optimization/update_optimization_task_log",
                     json=data
                 )
                 response.raise_for_status()
-                logger.debug(f"Updated logs for task {task_id}")
+                print(f"Updated logs for task {task_id}")
         except Exception as e:
-            logger.error(f"Failed to update task logs: {e}")
+            print(f"Failed to update task logs: {e}")
     
-    async def save_optimization_result(self, task_id: str, generation_num: int, 
+    def save_optimization_result(self, task_id: str, generation_num: int, 
                                      solution_code: str, combined_score: float, 
                                      public_metrics: dict):
         """Save optimization result via API."""
         try:
-            async with httpx.AsyncClient() as client:
+            with httpx.Client() as client:
                 data = {
                     "optimization_task_id": task_id,
                     "generation_num": generation_num,
@@ -167,29 +167,29 @@ def run_optimization():
                     "public_metrics": public_metrics
                 }
                 
-                response = await client.post(
-                    f"{self.api_base_url}/internal/rpc/optimization/create_optimization_result",
+                response = client.post(
+                    f"{self.api_base_url}/internal/api/optimization/create_optimization_result",
                     json=data
                 )
                 response.raise_for_status()
-                logger.info(f"Saved result for task {task_id}, generation {generation_num}")
+                print(f"Saved result for task {task_id}, generation {generation_num}")
         except Exception as e:
-            logger.error(f"Failed to save optimization result: {e}")
+            print(f"Failed to save optimization result: {e}")
     
-    async def complete_optimization_task(self, task_id: str):
+    def complete_optimization_task(self, task_id: str):
         """Mark optimization task as complete via API."""
         try:
-            async with httpx.AsyncClient() as client:
+            with httpx.Client() as client:
                 data = {"task_id": task_id}
                 
-                response = await client.post(
-                    f"{self.api_base_url}/internal/rpc/optimization/complete_optimization_task",
+                response = client.post(
+                    f"{self.api_base_url}/internal/api/optimization/complete_optimization_task",
                     json=data
                 )
                 response.raise_for_status()
-                logger.info(f"Marked task {task_id} as complete")
+                print(f"Marked task {task_id} as complete")
         except Exception as e:
-            logger.error(f"Failed to complete task: {e}")
+            print(f"Failed to complete task: {e}")
     
     def flush_logs_to_buffer(self):
         """Flush current logs to buffer for API update."""
@@ -253,10 +253,10 @@ def run_optimization():
                 code_embed_sim_threshold=0.995,
                 novelty_llm_models=["gpt-5-mini"],
                 novelty_llm_kwargs=dict(temperatures=[0.0], max_tokens=16384),
-                llm_dynamic_selection="ucb1",
+                llm_dynamic_selection=None,  # Disable dynamic selection to avoid numerical issues
                 llm_dynamic_selection_kwargs=dict(exploration_coef=1.0),
                 init_program_path="initial.py",
-                results_dir="results",
+                results_dir="/home/pawel/saiteki/saiteki-worker/results",
             )
             
             # Create custom EvolutionRunner with task integration
@@ -269,25 +269,43 @@ def run_optimization():
             )
             
             # Run evolution
-            logger.info(f"Starting evolution for task {task.id}")
+            print(f"Starting evolution for task {task.id}")
             runner.run()
             
-            logger.info(f"Completed evolution for task {task.id}")
+            print(f"Completed evolution for task {task.id}")
             
-            # Mark task as complete
-            import asyncio
-            asyncio.run(self.complete_optimization_task(task.id))
+            # Mark task as complete (success case)
+            self.update_task_logs(
+                task_id=task.id,
+                logs="Task completed successfully",
+                running=False
+            )
             
         except Exception as e:
-            logger.error(f"Error running optimization task {task.id}: {e}")
-            # Try to mark task as failed
+            print(f"Error running optimization task {task.id}: {e}")
+            # Log error and mark task as failed
             try:
-                import asyncio
-                asyncio.run(self.complete_optimization_task(task.id))
-            except:
-                pass
+                self.update_task_logs(
+                    task_id=task.id,
+                    logs=f"Task failed with error: {str(e)}",
+                    running=False
+                )
+            except Exception as log_error:
+                print(f"Failed to log task failure: {log_error}")
             raise
         finally:
+            # Always ensure task is marked as not running and logs are flushed
+            try:
+                # Final log flush and status update
+                final_log = f"Task {task.id} processing finished"
+                self.update_task_logs(
+                    task_id=task.id,
+                    logs=final_log,
+                    running=False
+                )
+            except Exception as final_error:
+                print(f"Failed to finalize task status: {final_error}")
+            
             # Restore original directory
             if 'original_cwd' in locals():
                 os.chdir(original_cwd)
@@ -306,34 +324,55 @@ class TaskAwareEvolutionRunner(EvolutionRunner):
     
     def _process_completed_job(self, job):
         """Override to add result saving and log flushing."""
-        # Call parent implementation first
-        super()._process_completed_job(job)
-        
-        # Get the program that was just added
+        print("BEFORE THE CALL")
+        # Get values directly from the job object
         try:
-            # Find the most recent program for this generation
-            programs = self.db.get_programs_by_generation(job.generation)
-            if programs:
-                # Get the program that was just added (should be the last one)
-                latest_program = max(programs, key=lambda p: p.id)
-                
-                # Save result via API
-                import asyncio
-                asyncio.run(self.task_service.save_optimization_result(
+            # Read the evaluated code from the job
+            try:
+                print("TRYING TO READ CODE")
+                evaluated_code = Path(job.exec_fname).read_text(encoding="utf-8")
+            except Exception as e:
+                print(f"Could not read code for job {job.job_id}. Error: {e}")
+                evaluated_code = ""
+            
+            # Get results from the job
+            results = self.scheduler.get_job_results(job.job_id, job.results_dir)
+            
+            correct_val = False
+            metrics_val = {}
+            combined_score = 0.0
+            public_metrics = {}
+            
+            if results:
+                correct_val = results.get("correct", {}).get("correct", False)
+                metrics_val = results.get("metrics", {})
+                combined_score = metrics_val.get("combined_score", 0.0)
+                public_metrics = metrics_val.get("public", {})
+            
+            # Save result via API using job data (synchronous)
+            try:
+                print("SAVING RESULT")
+                self.task_service.save_optimization_result(
                     task_id=self.task_id,
                     generation_num=job.generation,
-                    solution_code=latest_program.code,
-                    combined_score=latest_program.combined_score,
-                    public_metrics=latest_program.public_metrics or {}
-                ))
+                    solution_code=evaluated_code,
+                    combined_score=combined_score,
+                    public_metrics=public_metrics
+                )
                 
                 # Flush logs
-                log_content = f"Generation {job.generation} completed. Score: {latest_program.combined_score}"
-                asyncio.run(self.task_service.update_task_logs(
+                log_content = f"Generation {job.generation} completed. Score: {combined_score}"
+                self.task_service.update_task_logs(
                     task_id=self.task_id,
                     logs=log_content,
                     running=True
-                ))
+                )
+            except Exception as e:
+                print(f"Failed to save result or update logs: {e}")
                 
         except Exception as e:
-            logger.error(f"Failed to save result or update logs: {e}")
+            print(f"Failed to process completed job for API integration: {e}")
+
+        print("AFTER THE CALL")
+
+        super()._process_completed_job(job)

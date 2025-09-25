@@ -286,20 +286,7 @@ function OptimizationTaskDetailRoute() {
 
 							<div className="space-y-4">
 								{results.map((result) => (
-									<Card key={`${result.id}-code`}>
-										<CardHeader className="flex flex-col gap-1">
-											<CardTitle className="flex items-center gap-2 text-base">
-												<Code2 className="h-4 w-4" /> Generation {result.generationNum}
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<ScrollArea className="max-h-64 rounded-md border bg-muted/40 p-4 text-xs">
-												<pre className="whitespace-pre-wrap break-words">
-													{result.solutionCode}
-												</pre>
-											</ScrollArea>
-										</CardContent>
-									</Card>
+									<CodeCard key={`${result.id}-code`} result={result} />
 								))}
 							</div>
 						</>
@@ -325,6 +312,36 @@ function OptimizationTaskDetailRoute() {
 				</Card>
 			) : null}
 		</div>
+	);
+}
+
+function CodeCard({ result }: { result: any }) {
+	const [isExpanded, setIsExpanded] = useState(false);
+
+	return (
+		<Card>
+			<CardHeader className="flex flex-row items-center justify-between">
+				<CardTitle className="flex items-center gap-2 text-base">
+					<Code2 className="h-4 w-4" /> Generation {result.generationNum}
+				</CardTitle>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => setIsExpanded(!isExpanded)}
+				>
+					{isExpanded ? "Hide code" : "Show code"}
+				</Button>
+			</CardHeader>
+			{isExpanded && (
+				<CardContent>
+					<div className="rounded-md border bg-muted/40 p-4 text-xs overflow-auto">
+						<pre className="whitespace-pre-wrap break-words">
+							{result.solutionCode}
+						</pre>
+					</div>
+				</CardContent>
+			)}
+		</Card>
 	);
 }
 
