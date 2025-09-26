@@ -103,10 +103,8 @@ import numpy as np
 
 # EVOLVE-BLOCK-END
 def run_optimization():
-    centers, radii = optimize()
-    # Calculate the sum of radii
-    sum_radii = np.sum(radii)
-    return centers, radii, sum_radii
+    result = optimize()
+    return result
 '''
         return content
     
@@ -292,21 +290,7 @@ def run_optimization():
                 parent_selection_lambda=10.0,
             )
 
-            search_task_sys_msg = """You are an expert mathematician specializing in circle packing problems and computational geometry. The best known result for the sum of radii when packing 26 circles in a unit square is 2.635.
-
-Key directions to explore:
-1. The optimal arrangement likely involves variable-sized circles
-2. A pure hexagonal arrangement may not be optimal due to edge effects
-3. The densest known circle packings often use a hybrid approach
-4. The optimization routine is critically important - simple physics-based models with carefully tuned parameters
-5. Consider strategic placement of circles at square corners and edges
-6. Adjusting the pattern to place larger circles at the center and smaller at the edges
-7. The math literature suggests special arrangements for specific values of n
-8. You can use the scipy optimize package (e.g. LP or SLSQP) to optimize the radii given center locations and constraints
-
-Make sure that all circles are disjoint and lie inside the unit square.
-
-Be creative and try to find a new solution better than the best known result."""
+            search_task_sys_msg = """You are an expert Software engineer specializing in code optimization. Your goal is to achieve a better result of the optimize function"""
             
             evo_config = EvolutionConfig(
                 task_sys_msg=search_task_sys_msg,

@@ -46,8 +46,10 @@ def optimize():
 
     # Compute maximum valid radii for this configuration
     radii = compute_max_radii(centers)
+
+    sum_radii = np.sum(radii)
     
-    return centers, radii
+    return centers, radii, sum_radii
 
 
 def compute_max_radii(centers):
