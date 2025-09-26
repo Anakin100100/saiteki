@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import httpx
+import time
 from pathlib import Path
 from loguru import logger
 from .models import OptimizationTask
@@ -16,14 +17,24 @@ class TaskService:
         self.api_base_url = api_base_url
         self.current_task_id = None
         self.log_buffer = []
+        self.accumulated_logs = ""  # Add accumulated logs tracking
+        self.log_file_path = None  # Track the evolution log file path
+        self.synced_log_lines = 0  # Track how many lines have been synced
         
     def create_evaluate_py(self, task: OptimizationTask) -> str:
         """Create a generic evaluate.py file based on task data."""
+        # Get the absolute path to the saiteki-worker directory
+        worker_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
         content = f'''"""
 Generic evaluator for optimization task {task.id}
 """
 
+import sys
 import os
+# Add the worker root directory to Python path so shinka can be imported
+sys.path.insert(0, "{worker_root}")
+
 import argparse
 import numpy as np
 from typing import Tuple, Optional, List, Dict, Any
@@ -135,10 +146,16 @@ def run_optimization():
     def update_task_logs(self, task_id: str, logs: str, running: bool = None):
         """Update optimization task logs via API."""
         try:
+            # Accumulate logs instead of overwriting
+            if logs:
+                timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+                new_log_line = f"[{timestamp}] {logs}\n"
+                self.accumulated_logs += new_log_line
+            
             with httpx.Client() as client:
                 data = {
                     "task_id": task_id,
-                    "logs": logs
+                    "logs": self.accumulated_logs  # Send complete log history
                 }
                 if running is not None:
                     data["running"] = running
@@ -165,11 +182,13 @@ def run_optimization():
                     "combined_score": combined_score,
                     "public_metrics": public_metrics
                 }
+                print(f"Saving optimization result: {data}")
                 
                 response = client.post(
                     f"{self.api_base_url}/internal/api/optimization/create_optimization_result",
                     json=data
                 )
+                print(response.json())
                 response.raise_for_status()
                 print(f"Saved result for task {task_id}, generation {generation_num}")
         except Exception as e:
@@ -200,13 +219,57 @@ def run_optimization():
             log_content = f"Task {self.current_task_id} processing update\n"
             self.log_buffer.append(log_content)
     
+    def sync_evolution_log(self, task_id: str, running: bool = None):
+        """Synchronize evolution log file with API by reading new lines."""
+        if not self.log_file_path or not os.path.exists(self.log_file_path):
+            return
+            
+        try:
+            with open(self.log_file_path, 'r', encoding='utf-8') as f:
+                all_lines = f.readlines()
+                
+            # Get only the new lines that haven't been synced
+            new_lines = all_lines[self.synced_log_lines:]
+            
+            if new_lines:
+                # Add new lines to accumulated logs
+                new_log_content = ''.join(new_lines)
+                self.accumulated_logs += new_log_content
+                
+                # Update synced line count
+                self.synced_log_lines = len(all_lines)
+                
+                # Send updated logs to API
+                with httpx.Client() as client:
+                    data = {
+                        "task_id": task_id,
+                        "logs": self.accumulated_logs
+                    }
+                    if running is not None:
+                        data["running"] = running
+                        
+                    response = client.post(
+                        f"{self.api_base_url}/internal/api/optimization/update_optimization_task_log",
+                        json=data
+                    )
+                    response.raise_for_status()
+                    print(f"Synced {len(new_lines)} new log lines for task {task_id}")
+                    
+        except Exception as e:
+            print(f"Failed to sync evolution log: {e}")
+    
     def run_optimization_task(self, task: OptimizationTask):
         """Run the complete optimization task with setup and cleanup."""
         self.current_task_id = task.id
+        self.accumulated_logs = ""  # Reset logs for new task
+        self.synced_log_lines = 0  # Reset synced line count
         
         try:
             # Setup environment
             task_dir = self.setup_task_environment(task)
+            
+            # Set up evolution log file path
+            self.log_file_path = os.path.join(task_dir, "results", "evolution_run.log")
             
             # Change to task directory
             original_cwd = os.getcwd()
@@ -289,35 +352,19 @@ Be creative and try to find a new solution better than the best known result."""
             
             print(f"Completed evolution for task {task.id}")
             
-            # Mark task as complete (success case)
-            self.update_task_logs(
-                task_id=task.id,
-                logs="Task completed successfully",
-                running=False
-            )
+            # Final sync of evolution log
+            self.sync_evolution_log(task_id=task.id, running=False)
             
         except Exception as e:
             print(f"Error running optimization task {task.id}: {e}")
-            # Log error and mark task as failed
-            try:
-                self.update_task_logs(
-                    task_id=task.id,
-                    logs=f"Task failed with error: {str(e)}",
-                    running=False
-                )
-            except Exception as log_error:
-                print(f"Failed to log task failure: {log_error}")
+            # Sync logs before marking as failed
+            self.sync_evolution_log(task_id=task.id, running=False)
             raise
         finally:
-            # Always ensure task is marked as not running and logs are flushed
+            # Always ensure final log sync and task is marked as not running
             try:
-                # Final log flush and status update
-                final_log = f"Task {task.id} processing finished"
-                self.update_task_logs(
-                    task_id=task.id,
-                    logs=final_log,
-                    running=False
-                )
+                # Final sync of any remaining logs
+                self.sync_evolution_log(task_id=task.id, running=False)
             except Exception as final_error:
                 print(f"Failed to finalize task status: {final_error}")
             
@@ -327,6 +374,9 @@ Be creative and try to find a new solution better than the best known result."""
             # Cleanup
             self.cleanup_task_environment()
             self.current_task_id = None
+            self.accumulated_logs = ""  # Reset for next task
+            self.log_file_path = None
+            self.synced_log_lines = 0
 
 
 class TaskAwareEvolutionRunner(EvolutionRunner):
@@ -375,13 +425,12 @@ class TaskAwareEvolutionRunner(EvolutionRunner):
                     public_metrics=public_metrics
                 )
                 
-                # Flush logs
-                log_content = f"Generation {job.generation} completed. Score: {combined_score}"
-                self.task_service.update_task_logs(
+                # Sync evolution log to get latest progress
+                self.task_service.sync_evolution_log(
                     task_id=self.task_id,
-                    logs=log_content,
                     running=True
                 )
+                
             except Exception as e:
                 print(f"Failed to save result or update logs: {e}")
                 

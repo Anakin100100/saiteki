@@ -24,12 +24,21 @@ export const internalOptimizationRouter = {
 	update_optimization_task_log: publicProcedure
 		.input(updateOptimizationTaskLogInput)
 		.handler(async ({ input }) => {
+			// Get current task to preserve existing logs if needed
+			const currentTask = await prisma.optimizationTask.findUnique({
+				where: { id: input.task_id },
+				select: { logs: true },
+			});
+
+			// Use the provided logs directly (worker now sends complete history)
+			const updatedLogs = input.logs;
+
 			return await prisma.optimizationTask.update({
 				where: {
 					id: input.task_id,
 				},
 				data: {
-					logs: input.logs,
+					logs: updatedLogs,
 					...(input.running === undefined
 						? {}
 						: {

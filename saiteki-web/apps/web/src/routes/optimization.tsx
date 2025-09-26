@@ -18,12 +18,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Loader2, PlusCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { orpc } from "@/utils/orpc";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Editor from "@monaco-editor/react";
+import { useTheme } from "@/components/theme-provider";
 
 export const Route = createFileRoute("/optimization")({
 	component: OptimizationListRoute,
@@ -39,7 +41,114 @@ const createTaskSchema = z.object({
 		.min(1, "Please provide the metrics generation logic."),
 });
 
+function CodeEditor({ form, disabled, theme }: { form: any; disabled: boolean; theme: string }) {
+	const [activeFile, setActiveFile] = useState<'optimized' | 'validate' | 'metrics'>('optimized');
+	
+	const files = {
+		optimized: {
+			name: 'optimize.py',
+			label: 'Optimized Function',
+			value: form.watch('optimized_func') || '',
+			placeholder: `def optimize(params):
+    """
+    Main optimization function that takes parameters
+    and returns the optimized result.
+    """
+    # Your optimization logic here
+    return optimized_result`
+		},
+		validate: {
+			name: 'validate.py', 
+			label: 'Validate Function',
+			value: form.watch('validate_result_func') || '',
+			placeholder: `def validate_result(result):
+    """
+    Validate the optimization result.
+    Returns True if valid, False otherwise.
+    """
+    # Your validation logic here
+    return is_valid`
+		},
+		metrics: {
+			name: 'metrics.py',
+			label: 'Metrics Function', 
+			value: form.watch('generate_metrics_func') || '',
+			placeholder: `def generate_metrics(result):
+    """
+    Generate performance metrics from the result.
+    Returns a dictionary of metric name to value.
+    """
+    # Calculate metrics here
+    return {
+        'accuracy': 0.95,
+        'performance': 0.87,
+        'efficiency': 0.92
+    }`
+		}
+	};
+
+	const handleEditorChange = useCallback((value: string | undefined) => {
+		const fieldName = activeFile === 'optimized' ? 'optimized_func' 
+			: activeFile === 'validate' ? 'validate_result_func' 
+			: 'generate_metrics_func';
+		form.setValue(fieldName, value || '');
+	}, [activeFile, form]);
+
+	const currentFile = files[activeFile];
+	const currentValue = currentFile.value || currentFile.placeholder;
+
+	return (
+		<div className="space-y-4">
+			<div className="flex space-x-1 rounded-lg bg-muted p-1">
+				{Object.entries(files).map(([key, file]) => (
+					<button
+						key={key}
+						type="button"
+						onClick={() => setActiveFile(key as any)}
+						disabled={disabled}
+						className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+							activeFile === key
+								? 'bg-background text-foreground shadow-sm'
+								: 'text-muted-foreground hover:text-foreground'
+						}`}
+					>
+						{file.label}
+					</button>
+				))}
+			</div>
+			
+			<div className="rounded-md border overflow-hidden">
+				<Editor
+					height="300px"
+					language="python"
+					theme={theme === "dark" ? "vs-dark" : "vs-light"}
+					value={currentValue}
+					onChange={handleEditorChange}
+					options={{
+						minimap: { enabled: false },
+						scrollBeyondLastLine: false,
+						fontSize: 14,
+						lineNumbers: "on",
+						wordWrap: "on",
+						folding: true,
+						readOnly: disabled,
+						automaticLayout: true,
+						tabSize: 4,
+						insertSpaces: true,
+					}}
+					loading={
+						<div className="flex h-[300px] items-center justify-center">
+							<Loader2 className="h-6 w-6 animate-spin" />
+						</div>
+					}
+				/>
+			</div>
+		</div>
+	);
+}
+
 function OptimizationListRoute() {
+	const { theme } = useTheme();
 	const location = useRouterState({
 		select: (state) => state.location,
 	});
@@ -135,59 +244,10 @@ function OptimizationListRoute() {
 						<div className="mb-6 rounded-lg border border-emerald-700 p-4">
 							<Form {...form}>
 								<form onSubmit={handleSubmit} className="space-y-4">
-									<FormField
-										control={form.control}
-										name="optimized_func"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Optimized function</FormLabel>
-												<FormControl>
-													<Textarea
-														placeholder="function optimize(...) { ... }"
-														rows={4}
-														disabled={isFormDisabled || createTaskMutation.isPending}
-														{...field}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-									<FormField
-										control={form.control}
-										name="validate_result_func"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Validate result function</FormLabel>
-												<FormControl>
-													<Textarea
-														placeholder="function validate(...) { ... }"
-														rows={4}
-														disabled={isFormDisabled || createTaskMutation.isPending}
-														{...field}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-									<FormField
-										control={form.control}
-										name="generate_metrics_func"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Generate metrics function</FormLabel>
-												<FormControl>
-													<Textarea
-														placeholder="function metrics(...) { ... }"
-														rows={4}
-														disabled={isFormDisabled || createTaskMutation.isPending}
-														{...field}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
+									<CodeEditor 
+										form={form}
+										disabled={isFormDisabled || createTaskMutation.isPending}
+										theme={theme}
 									/>
 									<div className="flex items-center justify-end gap-2">
 										<Button

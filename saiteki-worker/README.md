@@ -15,10 +15,9 @@ def optimize():
     that attempts to maximize the sum of their radii.
 
     Returns:
-        Tuple of (centers, radii, sum_of_radii)
+        Tuple of (centers, radii)
         centers: np.array of shape (26, 2) with (x, y) coordinates
         radii: np.array of shape (26) with radius of each circle
-        sum_of_radii: Sum of all radii
     """
     # Initialize arrays for 26 circles
     n = 26
@@ -47,9 +46,8 @@ def optimize():
 
     # Compute maximum valid radii for this configuration
     radii = compute_max_radii(centers)
-    sum_radii = np.sum(radii)
     
-    return centers, radii, sum_radii
+    return centers, radii
 
 
 def compute_max_radii(centers):
@@ -178,10 +176,7 @@ def aggregate_metrics(results: List[Any], results_dir: str) -> Dict[str, Any]:
         }
     
     centers, radii, sum_radii = best_result
-    
-    # Format centers for display
-    centers_str = format_centers_string(centers)
-    
+        
     # Save detailed results
     extra_file = os.path.join(results_dir, "circle_packing_details.npz")
     try:
@@ -197,20 +192,11 @@ def aggregate_metrics(results: List[Any], results_dir: str) -> Dict[str, Any]:
     return {
         "combined_score": float(sum_radii),
         "public": {
-            "centers_str": centers_str,
             "num_circles": len(centers),
             "best_sum_radii": float(sum_radii)
         },
         "private": {}
     }
-
-
-def format_centers_string(centers: np.ndarray) -> str:
-    """Formats circle centers into a multi-line string for display."""
-    return "\n".join([
-        f"  centers[{i}] = ({x:.4f}, {y:.4f})"
-        for i, (x, y) in enumerate(centers)
-    ])
 ```
 
 ## Usage

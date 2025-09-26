@@ -26,9 +26,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { orpc } from "@/utils/orpc";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Code2 } from "lucide-react";
+import { ArrowLeft, Code2, Loader2 } from "lucide-react";
 import Plot from "react-plotly.js";
 import { useEffect, useMemo, useState } from "react";
+import Editor from "@monaco-editor/react";
+import { useTheme } from "@/components/theme-provider";
 
 function parseMetrics(value: unknown) {
 	if (!value || typeof value !== "object") {
@@ -48,6 +50,7 @@ export const Route = createFileRoute("/optimization/$taskId")({
 
 function OptimizationTaskDetailRoute() {
 	const { taskId } = Route.useParams();
+	const { theme } = useTheme();
 
 	const tasksQuery = useQuery(orpc.optimization.query_optimization_tasks.queryOptions());
 	const resultsQuery = useQuery(
@@ -108,6 +111,50 @@ function OptimizationTaskDetailRoute() {
 
 		const label = selectedMetric === "combined_score" ? "Combined Score" : selectedMetric;
 
+		// For combined_score, show best results as green line and individual results as red dots
+		if (selectedMetric === "combined_score") {
+			// Calculate best score achieved so far at each generation
+			const bestSoFar: number[] = [];
+			let currentBest = -Infinity;
+			
+			yValues.forEach((value) => {
+				if (value !== null && value > currentBest) {
+					currentBest = value;
+				}
+				bestSoFar.push(currentBest === -Infinity ? null : currentBest);
+			});
+
+			return [
+				// Individual results as red dots
+				{
+					x: results.map((result) => result.generationNum),
+					y: yValues,
+					type: "scatter" as const,
+					mode: "markers" as const,
+					marker: {
+						color: "#ef4444", // red-500
+						size: 8,
+					},
+					hovertemplate: "Generation %{x}<br>Result: %{y:.4f}<extra></extra>",
+					name: "Results",
+				},
+				// Best so far as green line
+				{
+					x: results.map((result) => result.generationNum),
+					y: bestSoFar,
+					type: "scatter" as const,
+					mode: "lines" as const,
+					line: {
+						color: "#22c55e", // green-500
+						width: 3,
+					},
+					hovertemplate: "Generation %{x}<br>Best so far: %{y:.4f}<extra></extra>",
+					name: "Best Result",
+				},
+			];
+		}
+
+		// For other metrics, use the original single line
 		return [
 			{
 				x: results.map((result) => result.generationNum),
@@ -303,11 +350,29 @@ function OptimizationTaskDetailRoute() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<ScrollArea className="max-h-64 rounded-md border bg-muted/40 p-4 text-xs">
-							<pre className="whitespace-pre-wrap break-words">
-								{task.logs}
-							</pre>
-						</ScrollArea>
+						<div className="h-72 rounded-md border overflow-hidden">
+							<Editor
+								height="100%"
+								language="text"
+								theme={theme === "dark" ? "vs-dark" : "vs-light"}
+								value={task.logs}
+								options={{
+									readOnly: true,
+									minimap: { enabled: false },
+									scrollBeyondLastLine: false,
+									fontSize: 12,
+									lineNumbers: "on",
+									wordWrap: "on",
+									folding: false,
+									automaticLayout: true,
+								}}
+								loading={
+									<div className="flex h-full items-center justify-center">
+										<Loader2 className="h-6 w-6 animate-spin" />
+									</div>
+								}
+							/>
+						</div>
 					</CardContent>
 				</Card>
 			) : null}
@@ -317,6 +382,7 @@ function OptimizationTaskDetailRoute() {
 
 function CodeCard({ result }: { result: any }) {
 	const [isExpanded, setIsExpanded] = useState(false);
+	const { theme } = useTheme();
 
 	return (
 		<Card>
@@ -334,10 +400,29 @@ function CodeCard({ result }: { result: any }) {
 			</CardHeader>
 			{isExpanded && (
 				<CardContent>
-					<div className="rounded-md border bg-muted/40 p-4 text-xs overflow-auto">
-						<pre className="whitespace-pre-wrap break-words">
-							{result.solutionCode}
-						</pre>
+					<div className="rounded-md border overflow-hidden">
+						<Editor
+							height="300px"
+							language="python"
+							theme={theme === "dark" ? "vs-dark" : "vs-light"}
+							value={result.solutionCode}
+							options={{
+								readOnly: true,
+								minimap: { enabled: false },
+								scrollBeyondLastLine: false,
+								fontSize: 14,
+								lineNumbers: "on",
+								wordWrap: "on",
+								folding: true,
+								automaticLayout: true,
+								tabSize: 4,
+							}}
+							loading={
+								<div className="flex h-[300px] items-center justify-center">
+									<Loader2 className="h-6 w-6 animate-spin" />
+								</div>
+							}
+						/>
 					</div>
 				</CardContent>
 			)}

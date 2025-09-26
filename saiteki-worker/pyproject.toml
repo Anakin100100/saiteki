@@ -31,3 +31,6 @@ dependencies = [
     "loguru",
     "nats-py>=2.11.0",
 ]
+
+[tool.setuptools]
+packages = ["shinka"]
