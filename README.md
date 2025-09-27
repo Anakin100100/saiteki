@@ -1,6 +1,6 @@
 # Description
 
-ShinkaEvolve has achieved a SOTA result on circle packing, an optimization problem that has been challenging computer scientists for decated, for 12 dollars in LLM API costs. This is a paradigm defining moment for optimizing software. This project makes shinka available to teams as a web app. 
+ShinkaEvolve has achieved a SOTA result on circle packing, an optimization problem that has been challenging computer scientists for decated, for 12 dollars in LLM API costs. This is a paradigm defining moment for optimizing software. Saiteki makes ShinkaEvolve available to teams as a web app. 
 
 # Contribution guide
 Contributions to the project are welcome from everybody. You can look for available tasks in the associated project https://github.com/users/Anakin100100/projects/2 but don't worry if there aren't any tasks that you feel comfortable starting on. There's a lot to work on so not every potential improvemnt has a task. Before contributing please schedule a short meeting with me at https://cal.com/paweł-biegun-lbvvws to discuss the project, your vision for it and how you would like to contribute. 
