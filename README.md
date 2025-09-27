@@ -37,7 +37,7 @@ uv sync
 
 Expose your OpenAI key in the worker shell 
 ```bash
-export export OPENAI_API_KEY='<your key>'
+export OPENAI_API_KEY='<your key>'
 ```
 
 Run the worker
